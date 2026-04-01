@@ -105,31 +105,48 @@ if uploaded_file:  #  If a file is uploaded, process it
             cleaned_df["Motor Amps"].max(),
         )
 
-        st.subheader("Parsed Task 1 Data")
-        st.dataframe(cleaned_df.head(10))
+        # Compute key metrics
+        st.subheader("Key Metrics")
+        max_amps = cleaned_df["Motor Amps"].max()
+        avg_amps = cleaned_df["Motor Amps"].mean()
+        row_for_max_amps = cleaned_df.loc[cleaned_df["Motor Amps"].idxmax()]
+        time_of_max_amps = row_for_max_amps["Date & Time"]
+        st.write(f"Max Motor Amps: {max_amps:.2f}")
+        st.write(f"Average Motor Amps: {avg_amps:.2f}")
+        st.write(f"Time of Max Load: {time_of_max_amps}")
 
-        st.subheader("Columns")
-        st.write(cleaned_df.columns.tolist())
-
-        st.subheader("Shape")
-        st.write({"rows": cleaned_df.shape[0], "columns": cleaned_df.shape[1]})
-
-        st.subheader("Basic Stats")
-        st.write(cleaned_df["Motor Amps"].describe())
-
+        # Plot amps over time and highlight max point
         st.subheader("Motor Amps vs Time")
-
         fig, ax = plt.subplots()
         ax.plot(cleaned_df["Date & Time"], cleaned_df["Motor Amps"])
-
+        ax.scatter(time_of_max_amps, max_amps, color="red", label="Peak")
         ax.set_xlabel("Time")
         ax.set_ylabel("Motor Amps")
-
         ax.set_title("Motor Amps Over Time")
-
+        ax.legend()
         plt.xticks(rotation=45)
-
         st.pyplot(fig)  # Display the plot in Streamlit
+
+        # Interpretation
+        st.subheader("Quick Insight")
+        st.write(
+            f"The motor reaches a peak load of {max_amps:.2f} at {time_of_max_amps}. "
+            f"The average operating load is {avg_amps:.2f} amps."
+        )
+
+        # Archived data preview and stats
+        # st.subheader("Parsed Task 1 Data")
+        # st.dataframe(cleaned_df.head(10))
+
+        # st.subheader("Columns")
+        # st.write(cleaned_df.columns.tolist())
+
+        # st.subheader("Shape")
+        # st.write({"rows": cleaned_df.shape[0], "columns": cleaned_df.shape[1]})
+
+        # st.subheader("Basic Stats")
+        # st.write(cleaned_df["Motor Amps"].describe())
+
     else:
         df = pd.read_excel(uploaded_file, sheet_name=selected_sheet)
         st.subheader("Preview")
