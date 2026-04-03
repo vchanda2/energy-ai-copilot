@@ -9,6 +9,50 @@ st.write("Upload an Excel file to begin analysis")
 uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 
+def answer_question(question, context):
+    q = (
+        question.lower().strip()
+    )  # strip whitespace and convert to lowercase for easier matching
+
+    if "peak" in q and "amp" in q:
+        return (
+            f"The peak motor current is {context['max_motor_amps']} amps, "
+            f"occurring at {context['time_of_peak_load']}."
+        )
+
+    if "peak" in q and ("load" in q or "power" in q or "kw" in q):
+        return (
+            f"The estimated peak load is {context['estimated_peak_kw']} kW, "
+            f"based on the current assumptions."
+        )
+
+    if "average" in q and "amp" in q:
+        return f"The average motor current is {context['average_motor_amps']} amps."
+
+    if "average" in q and ("load" in q or "power" in q or "kw" in q):
+        return f"The estimated average load is {context['estimated_average_kw']} kW."
+
+    if "annual" in q and ("energy" in q or "kwh" in q):
+        return (
+            f"The estimated annual energy consumption is "
+            f"{context['estimated_annual_kwh']:,.0f} kWh/year."
+        )
+
+    if "annual" in q and ("hours" in q or "runtime" in q):
+        return (
+            f"The estimated annual operating time is "
+            f"{context['estimated_annual_hours']} hours/year."
+        )
+
+    if "when" in q and ("peak" in q or "max" in q):
+        return f"The peak occurred at {context['time_of_peak_load']}."
+
+    return (
+        "I can currently answer questions about peak amps, average amps, "
+        "peak load, average load, annual hours, and annual energy."
+    )
+
+
 def parse_task1_sheet(uploaded_file, sheet_name):
     # Read the raw sheet without headers to find the data section
     raw_df = pd.read_excel(uploaded_file, sheet_name=sheet_name, header=None)
@@ -198,6 +242,28 @@ if uploaded_file:  #  If a file is uploaded, process it
             f"The motor reaches a peak load of {max_amps:.2f} at {time_of_max_amps}. "
             f"The average operating load is {avg_amps:.2f} amps."
         )
+
+        # Build Q&A layer
+        st.subheader("Ask about the data")
+        user_question = st.text_input(
+            "Ask a question", placeholder="Example: What is the peak load?"
+        )
+
+        # structured context for answering questions
+        context = {
+            "max_motor_amps": round(max_amps, 2),
+            "avg_motor_amps": round(avg_amps, 2),
+            "time_of_peak_load": str(time_of_max_amps),
+            "estimated_peak_kw": round(peak_kw, 2),
+            "estimated_avg_kw": round(avg_kw, 2),
+            "estimated_annual_hours": round(estimated_annual_hours, 2),
+            "estimated_annual_kwh": round(estimated_annual_kwh, 2),
+        }
+
+        if user_question:
+            st.subheader("AI copilot answer")
+            answer = answer_question(user_question, context)
+            st.write("Answer:", answer)
 
         # Archived data preview and stats
         # st.subheader("Parsed Task 1 Data")
