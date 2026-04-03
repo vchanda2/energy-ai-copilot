@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
+import math
 
 st.title("Energy AI Copilot 🚀")
 st.write("Upload an Excel file to begin analysis")
@@ -105,7 +106,24 @@ if uploaded_file:  #  If a file is uploaded, process it
             cleaned_df["Motor Amps"].max(),
         )
 
-        # Compute key metrics
+        # Add user inputs
+        st.subheader("Engineering Assumptions")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            voltage = st.number_input(
+                "Voltage (V)", min_value=0.0, max_value=10000.0, value=480.0, step=0.1
+            )
+        with col2:
+            power_factor = st.number_input(
+                "Power Factor", min_value=0.0, max_value=1.0, value=0.85, step=0.01
+            )
+        with col3:
+            efficiency = st.number_input(
+                "Motor Efficiency)", min_value=0.1, max_value=1.0, value=0.9, step=0.01
+            )
+
+        # Compute key metrics for current
         st.subheader("Key Metrics")
         max_amps = cleaned_df["Motor Amps"].max()
         avg_amps = cleaned_df["Motor Amps"].mean()
@@ -114,6 +132,53 @@ if uploaded_file:  #  If a file is uploaded, process it
         st.write(f"Max Motor Amps: {max_amps:.2f}")
         st.write(f"Average Motor Amps: {avg_amps:.2f}")
         st.write(f"Time of Max Load: {time_of_max_amps}")
+
+        # Compute key power and energy metrics
+        peak_kw = math.sqrt(3) * voltage * max_amps * power_factor * efficiency / 1000
+        avg_kw = math.sqrt(3) * voltage * avg_amps * power_factor * efficiency / 1000
+
+        amps_threshold = 1.0
+
+        total_time_in_dataset = (
+            cleaned_df["Date & Time"].max() - cleaned_df["Date & Time"].min()
+        ).total_seconds() / 3600  # compute dataset time span in hours
+
+        # compute mediam time step per sample
+        time_diff_hours = cleaned_df["Date & Time"].diff().dt.total_seconds() / 3600
+        median_step_hours = time_diff_hours.median()
+
+        # compute running hours in dataset based on amps threshold
+        running_mask = cleaned_df["Motor Amps"] > amps_threshold
+        running_hours = (
+            running_mask.sum() * median_step_hours
+        )  # estimate running hours based on count of samples above threshold and median time step between samples
+
+        # Fraction of time in hours motor is on within the dataset
+        fraction_time_on = running_hours / total_time_in_dataset
+
+        # Estimated annual operating hours
+        estimated_annual_hours = fraction_time_on * 24 * 365
+
+        # Estimated annual energy consumption in kWh
+        estimated_annual_kwh = avg_kw * estimated_annual_hours
+
+        st.subheader("Estimated Power & Energy Metrics")
+        st.write(f"Estimated Peak Power: {peak_kw:.2f} kW")
+        st.write(f"Estimated Average Power: {avg_kw:.2f} kW")
+        st.write(
+            f"Estimated Annual Operating Hours: {estimated_annual_hours:.2f} hours"
+        )
+        st.write(f"Estimated Annual Energy Consumption: {estimated_annual_kwh:.2f} kWh")
+
+        # Add assumptions
+        st.subheader("Assumptions Made")
+
+        st.write(
+            "Power and energy are estimated using a simplified 3 phase motor power formula. "
+            "The calculation assumes the motor operates at the user-input voltage, power factor, and efficiency. "
+            " Motor is considered 'on' when amps exceed a threshold of 1 amp.\n "
+            " Median time step between samples is used to estimate running hours from the count of samples above the threshold."
+        )
 
         # Plot amps over time and highlight max point
         st.subheader("Motor Amps vs Time")
