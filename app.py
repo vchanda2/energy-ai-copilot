@@ -1,7 +1,7 @@
+import math
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
-import math
 
 st.title("Energy AI Copilot 🚀")
 st.write("Upload an Excel file to begin analysis")
@@ -264,6 +264,79 @@ if uploaded_file:  #  If a file is uploaded, process it
             st.subheader("AI copilot answer")
             answer = answer_question(user_question, context)
             st.write("Answer:", answer)
+
+        # Compute and display anomaly threshold
+        anomaly_threshold = avg_amps + 3 * cleaned_df["Motor Amps"].std()
+        high_load_df = cleaned_df[cleaned_df["Motor Amps"] > anomaly_threshold].copy()
+
+        st.subheader("High load events")
+        st.write(f"Threshold for high-load detection: {anomaly_threshold:.2f} amps")
+        st.write(f"Number of high-load events detected: {len(high_load_df)}")
+        st.dataframe(high_load_df.head(10))
+
+        # Find and show top 5 peak events
+        top_events = (
+            cleaned_df.sort_values(by="Motor Amps", ascending=False).head(5).copy()
+        )
+        st.subheader("Top 5 Peak Events")
+        st.dataframe(top_events)
+
+        # AI copilot insights
+
+        insights = []
+        recommendations = []
+
+        if max_amps > 1.5 * avg_amps:
+            insights.append(
+                "The system experiences significantly higher peak loads compared to average operation."
+            )
+            recommendations.append(
+                "Review peak load conditions to confirm motor sizing is appropriate."
+            )
+
+        if fraction_time_on < 0.3:
+            insights.apppend(
+                "The motor operates intermittently with a relatively low duty cycle."
+            )
+            recommendations.append(
+                "Confirm whether intermittent operation aligns with intended process usage ."
+            )
+
+        elif fraction_time_on > 0.7:
+            insights.append(
+                "The motor operates for most of the observed period, indicating continuous operation."
+            )
+            recommendations.append(
+                "Evaluate opportunities to improve efficiency during continuous operation, such as variable frequency drives or load management."
+            )
+
+        if len(high_load_df) > 0:
+            insights.append(
+                f"{len(high_load_df)} high-load events were detected, suggesting occasional stress conditions."
+            )
+            recommendations.append(
+                "Investigate high-load events to determine if they are expected or abnormal."
+            )
+
+        st.caption(
+            "Note: These insights and recommendations are based on the uploaded data and assumptions. They are intended to assist engineering interpretation."
+        )
+
+        st.subheader("AI Copilot Insights")
+
+        if insights:
+            for insight in insights:
+                st.write(f"- {insight}")
+
+        else:
+            st.write("No major anomalies detected.")
+
+        if recommendations:
+            for recommendation in recommendations:
+                st.write(f"- {recommendation}")
+
+        else:
+            st.write("No immediate actions suggested")
 
         # Archived data preview and stats
         # st.subheader("Parsed Task 1 Data")
